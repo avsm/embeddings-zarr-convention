@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Template Convention",
-  "description": "Schema for Template Zarr convention, supporting both key-prefixed and nested namespace patterns",
+  "title": "Geoembeddings Convention",
+  "description": "Schema for Geoembeddings Zarr convention, describing geospatial embedding groups with model provenance and processing metadata",
   "type": "object",
   "properties": {
     "zarr_format": {
@@ -10,8 +10,8 @@
     },
     "node_type": {
       "type": "string",
-      "enum": ["array", "group"],
-      "description": "Type of Zarr node"
+      "const": "group",
+      "description": "Type of Zarr node (must be group)"
     },
     "attributes": {
       "type": "object",
@@ -23,17 +23,67 @@
           "contains": {
             "$ref": "#/$defs/conventionMetadata"
           }
+        },
+        "geoemb:type": {
+          "type": "string",
+          "enum": ["pixel", "chip"],
+          "description": "REQUIRED. Type of embedding: 'pixel' for per-pixel embeddings, 'chip' for image patch embeddings"
+        },
+        "geoemb:dimensions": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "REQUIRED. Dimensionality of the embedding vector"
+        },
+        "geoemb:model": {
+          "type": "string",
+          "format": "uri",
+          "description": "REQUIRED. URL reference to the encoder model used to generate embeddings"
+        },
+        "geoemb:source_data": {
+          "type": "string",
+          "format": "uri",
+          "description": "REQUIRED. URL reference to the source dataset from which embeddings were derived"
+        },
+        "geoemb:gsd": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Ground sample distance in meters"
+        },
+        "geoemb:chip_layout": {
+          "$ref": "#/$defs/chipLayoutObject"
+        },
+        "geoemb:fit_for_use": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of intended applications or use cases"
+        },
+        "geoemb:quantization": {
+          "$ref": "#/$defs/quantizationObject"
+        },
+        "geoemb:decoder": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL reference to a decoder model for reconstructing data from embeddings"
+        },
+        "geoemb:benchmark": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": "List of URLs to benchmark evaluation results"
         }
       },
-      "required": ["zarr_conventions"],
-      "oneOf": [
-        {
-          "$ref": "#/$defs/keyPrefixedAttributes"
-        },
-        {
-          "$ref": "#/$defs/nestedAttributes"
+      "required": ["zarr_conventions", "geoemb:type", "geoemb:dimensions", "geoemb:model", "geoemb:source_data"],
+      "if": {
+        "properties": {
+          "geoemb:type": { "const": "chip" }
         }
-      ]
+      },
+      "then": {
+        "required": ["zarr_conventions", "geoemb:type", "geoemb:dimensions", "geoemb:model", "geoemb:source_data", "geoemb:chip_layout"]
+      },
+      "additionalProperties": true
     }
   },
   "required": ["zarr_format", "node_type", "attributes"],
@@ -41,122 +91,109 @@
   "$defs": {
     "conventionMetadata": {
       "type": "object",
-      "description": "Template convention metadata object for use in zarr_conventions array",
+      "description": "Geoembeddings convention metadata object for use in zarr_conventions array",
       "properties": {
         "schema_url": {
           "type": "string",
-          "const": "https://raw.githubusercontent.com/zarr-conventions/template/refs/tags/v1/schema.json",
+          "const": "https://raw.githubusercontent.com/geo-embeddings/embeddings-zarr-convention/refs/tags/v1/schema.json",
           "description": "URL to the JSON Schema definition for this convention"
         },
         "spec_url": {
           "type": "string",
-          "const": "https://github.com/zarr-conventions/template/blob/v1/README.md",
+          "const": "https://github.com/geo-embeddings/embeddings-zarr-convention/blob/v1/README.md",
           "description": "URL to the full specification document"
         },
         "uuid": {
           "type": "string",
-          "const": "00000000-0000-0000-0000-000000000000",
+          "const": "61c12cc5-0e28-4056-999a-480cf3fb7e4c",
           "description": "UUID that permanently identifies this convention"
         },
         "name": {
           "type": "string",
-          "description": "Human-readable name of the convention. Should be 'template:' for key-prefixed pattern or 'template' for nested pattern"
+          "const": "geoemb:",
+          "description": "Human-readable name of the convention using key-prefixed pattern"
         },
         "description": {
           "type": "string",
-          "const": "Template convention for demonstrating Zarr convention metadata structure",
+          "const": "Geoembeddings convention for geospatial embedding arrays with model provenance",
           "description": "Brief description of the convention's purpose and usage"
         }
       },
       "anyOf": [
-        {
-          "required": ["schema_url"]
-        },
-        {
-          "required": ["spec_url"]
-        },
-        {
-          "required": ["uuid"]
-        }
+        { "required": ["schema_url"] },
+        { "required": ["spec_url"] },
+        { "required": ["uuid"] }
       ],
       "additionalProperties": false
     },
-    "conventionProperties": {
+    "chipLayoutObject": {
       "type": "object",
-      "description": "Template convention properties",
+      "description": "Chip layout configuration for chip-type embeddings",
       "properties": {
-        "new_field": {
+        "layout_type": {
           "type": "string",
-          "description": "REQUIRED. Describe the required field..."
+          "enum": ["regular_grid", "irregular"],
+          "description": "REQUIRED. Type of chip layout"
         },
-        "xyz": {
-          "$ref": "#/$defs/xyzObject"
-        },
-        "another_one": {
+        "chip_size": {
           "type": "array",
-          "description": "Array of numeric values",
-          "items": {
-            "type": "number"
-          }
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "REQUIRED. Chip dimensions in pixels [height, width]"
+        },
+        "stride": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Stride between chips [y, x]. Defaults to chip_size if not specified"
+        },
+        "grid_id": {
+          "type": "string",
+          "description": "Identifier for a predefined grid system"
+        },
+        "grid_definition": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to grid definition document"
         }
       },
-      "required": ["new_field"],
+      "required": ["layout_type", "chip_size"],
       "additionalProperties": false
     },
-    "xyzObject": {
+    "quantizationObject": {
       "type": "object",
-      "description": "XYZ Object containing x, y, z coordinates",
+      "description": "Quantization details for compressed embeddings",
       "properties": {
-        "x": {
-          "type": "number",
-          "description": "REQUIRED. X coordinate value"
-        },
-        "y": {
-          "type": "number",
-          "description": "REQUIRED. Y coordinate value"
-        },
-        "z": {
-          "type": "number",
-          "description": "REQUIRED. Z coordinate value"
-        }
-      },
-      "required": ["x", "y", "z"],
-      "additionalProperties": false
-    },
-    "keyPrefixedAttributes": {
-      "type": "object",
-      "description": "Template convention using key-prefixed pattern (e.g., template:new_field)",
-      "properties": {
-        "zarr_conventions": true,
-        "template:new_field": {
+        "method": {
           "type": "string",
-          "description": "REQUIRED. Describe the required field..."
+          "description": "REQUIRED. Quantization method used (e.g., 'linear', 'product_quantization', 'binary')"
         },
-        "template:xyz": {
-          "$ref": "#/$defs/xyzObject"
+        "original_dtype": {
+          "type": "string",
+          "description": "REQUIRED. Original data type before quantization (e.g., 'float32')"
         },
-        "template:another_one": {
-          "type": "array",
-          "description": "Array of numeric values",
-          "items": {
-            "type": "number"
-          }
+        "quantized_dtype": {
+          "type": "string",
+          "description": "Data type after quantization (e.g., 'int8', 'uint8')"
+        },
+        "scale": {
+          "type": "number",
+          "description": "Scale factor for linear dequantization"
+        },
+        "offset": {
+          "type": "number",
+          "description": "Offset for linear dequantization"
+        },
+        "link": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to quantization codebook or lookup table"
         }
       },
-      "required": ["template:new_field"],
-      "additionalProperties": true
-    },
-    "nestedAttributes": {
-      "type": "object",
-      "description": "Template convention using nested pattern (single 'template' key)",
-      "properties": {
-        "zarr_conventions": true,
-        "template": {
-          "$ref": "#/$defs/conventionProperties"
-        }
-      },
-      "required": ["template"],
-      "additionalProperties": true
+      "required": ["method", "original_dtype"],
+      "additionalProperties": false
     }
   }
 }

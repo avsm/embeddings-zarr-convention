@@ -1,4 +1,5 @@
 import Ajv2020 from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
 import fs from "fs";
 
 // Read command line arguments
@@ -16,6 +17,7 @@ const data = JSON.parse(fs.readFileSync(dataPath, "utf8"));
 
 // Validate
 const ajv = new Ajv2020({ allErrors: true });
+addFormats(ajv);
 const validate = ajv.compile(schema);
 const valid = validate(data);
 
