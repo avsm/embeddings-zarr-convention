@@ -44,6 +44,10 @@
           "format": "uri",
           "description": "REQUIRED. URL reference to the source dataset from which embeddings were derived"
         },
+        "geoemb:data_type": {
+          "type": "string",
+          "description": "REQUIRED. Data type of stored embeddings (e.g., 'float32', 'int8', 'uint16')"
+        },
         "geoemb:gsd": {
           "type": "number",
           "exclusiveMinimum": 0,
@@ -55,11 +59,6 @@
         "geoemb:quantization": {
           "$ref": "#/$defs/quantizationObject"
         },
-        "geoemb:decoder": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL reference to a decoder model for reconstructing data from embeddings"
-        },
         "geoemb:benchmark": {
           "type": "array",
           "items": {
@@ -69,14 +68,14 @@
           "description": "List of URLs to benchmark evaluation results"
         }
       },
-      "required": ["zarr_conventions", "geoemb:type", "geoemb:dimensions", "geoemb:model", "geoemb:source_data"],
+      "required": ["zarr_conventions", "geoemb:type", "geoemb:dimensions", "geoemb:model", "geoemb:source_data", "geoemb:data_type"],
       "if": {
         "properties": {
           "geoemb:type": { "const": "chip" }
         }
       },
       "then": {
-        "required": ["zarr_conventions", "geoemb:type", "geoemb:dimensions", "geoemb:model", "geoemb:source_data", "geoemb:chip_layout"]
+        "required": ["zarr_conventions", "geoemb:type", "geoemb:dimensions", "geoemb:model", "geoemb:source_data", "geoemb:data_type", "geoemb:chip_layout"]
       },
       "additionalProperties": true
     }

@@ -70,6 +70,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
 | geoemb:dimensions  | integer           | **REQUIRED**. Dimensionality of the embedding vector |
 | geoemb:model       | string (URL)      | **REQUIRED**. Reference to the encoder model         |
 | geoemb:source_data | string (URL)      | **REQUIRED**. Reference to the source dataset        |
+| geoemb:data_type   | string            | **REQUIRED**. Data type of stored embeddings (e.g., "float32", "int8") |
 
 **Note**: When `geoemb:type` is `"chip"`, the `geoemb:chip_layout` field is also required.
 
@@ -80,7 +81,6 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
 | geoemb:gsd                 | number                                      | Ground sample distance in meters                   |
 | geoemb:chip_layout         | [Chip Layout Object](#chip-layout-object)   | Chip layout configuration (required for chip-type) |
 | geoemb:quantization        | [Quantization Object](#quantization-object) | Compression/quantization details                   |
-| geoemb:decoder             | string (URL)                                | Reference to a decoder model                       |
 | geoemb:benchmark           | \[string]                                   | URLs to benchmark evaluation results               |
 
 ### Example (Minimal Pixel Embedding)
@@ -96,7 +96,8 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
     "geoemb:type": "pixel",
     "geoemb:dimensions": 768,
     "geoemb:model": "https://huggingface.co/made-with-clay/Clay",
-    "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/"
+    "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "geoemb:data_type": "float32"
   }
 }
 ```
@@ -115,6 +116,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
     "geoemb:dimensions": 768,
     "geoemb:model": "https://huggingface.co/made-with-clay/Clay",
     "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "geoemb:data_type": "float32",
     "geoemb:gsd": 10.0,
     "geoemb:chip_layout": {
       "layout_type": "regular_grid",
