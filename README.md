@@ -79,7 +79,6 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
 | -------------------------- | ------------------------------------------- | -------------------------------------------------- |
 | geoemb:gsd                 | number                                      | Ground sample distance in meters                   |
 | geoemb:chip_layout         | [Chip Layout Object](#chip-layout-object)   | Chip layout configuration (required for chip-type) |
-| geoemb:fit_for_use         | \[string]                                   | Intended applications or use cases                 |
 | geoemb:quantization        | [Quantization Object](#quantization-object) | Compression/quantization details                   |
 | geoemb:decoder             | string (URL)                                | Reference to a decoder model                       |
 | geoemb:benchmark           | \[string]                                   | URLs to benchmark evaluation results               |
@@ -121,8 +120,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
       "layout_type": "regular_grid",
       "chip_size": [256, 256],
       "stride": [256, 256]
-    },
-    "geoemb:fit_for_use": ["land_cover_classification", "semantic_search"]
+    }
   }
 }
 ```

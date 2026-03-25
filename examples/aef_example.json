@@ -22,14 +22,6 @@
       "quantized_dtype": "int8",
       "scale": 0.0078125,
       "offset": 0.0
-    },
-    "geoemb:fit_for_use": [
-      "land_cover_classification",
-      "crop_type_mapping",
-      "tree_species_classification",
-      "deforestation_monitoring",
-      "change_detection",
-      "similarity_search"
-    ]
+    }
   }
 }

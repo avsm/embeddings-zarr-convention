@@ -52,11 +52,6 @@
         "geoemb:chip_layout": {
           "$ref": "#/$defs/chipLayoutObject"
         },
-        "geoemb:fit_for_use": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "List of intended applications or use cases"
-        },
         "geoemb:quantization": {
           "$ref": "#/$defs/quantizationObject"
         },

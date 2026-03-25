@@ -21,14 +21,6 @@
       "chip_size": [256, 256],
       "stride": [256, 256]
     },
-    "geoemb:fit_for_use": [
-      "land_cover_classification",
-      "crop_type_mapping",
-      "tree_species_classification",
-      "deforestation_monitoring",
-      "change_detection",
-      "similarity_search"
-    ],
     "geoemb:benchmark": [
       "https://clay-foundation.github.io/model/benchmarks"
     ]
