@@ -69,7 +69,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
 | geoemb:type        | "pixel" \| "chip" | **REQUIRED**. Type of embedding                      |
 | geoemb:dimensions  | integer           | **REQUIRED**. Dimensionality of the embedding vector |
 | geoemb:model       | string (URL)      | **REQUIRED**. Reference to the encoder model         |
-| geoemb:source_data | string (URL)      | **REQUIRED**. Reference to the source dataset        |
+| geoemb:source_data | string (URL) or \[string] | **REQUIRED**. Reference(s) to the source dataset(s) |
 | geoemb:data_type   | string            | **REQUIRED**. Data type of stored embeddings (e.g., "float32", "int8") |
 
 **Note**: When `geoemb:type` is `"chip"`, the `geoemb:chip_layout` field is also required.
@@ -81,6 +81,8 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
 | geoemb:gsd                 | number                                      | Ground sample distance in meters                   |
 | geoemb:chip_layout         | [Chip Layout Object](#chip-layout-object)   | Chip layout configuration (required for chip-type) |
 | geoemb:quantization        | [Quantization Object](#quantization-object) | Compression/quantization details                   |
+| geoemb:spatial_layout      | string                                      | Spatial organization scheme (e.g., "utm_zones")    |
+| geoemb:build_version       | string                                      | Version of the software that built this store      |
 | geoemb:benchmark           | \[string]                                   | URLs to benchmark evaluation results               |
 
 ### Example (Minimal Pixel Embedding)
@@ -147,12 +149,37 @@ Details for embeddings that have been quantized for compression.
 
 | Field Name      | Type         | Description                                                                          |
 | --------------- | ------------ | ------------------------------------------------------------------------------------ |
-| method          | string       | **REQUIRED**. Quantization method (e.g., "linear", "product_quantization", "binary") |
+| method          | string       | **REQUIRED**. Quantization method (e.g., "linear", "per_pixel_scale", "product_quantization", "binary") |
 | original_dtype  | string       | **REQUIRED**. Original data type before quantization (e.g., "float32")               |
 | quantized_dtype | string       | Data type after quantization (e.g., "int8")                                          |
 | scale           | number       | Scale factor for linear dequantization                                               |
 | offset          | number       | Offset for linear dequantization                                                     |
+| scale_array     | string       | Array name containing per-pixel scales (for per_pixel_scale method)                  |
+| nodata          | number or string | Value in the scale array indicating no data (e.g., "nan", "+inf")                |
 | link            | string (URL) | URL to quantization codebook or lookup table                                         |
+
+#### Quantization Methods
+
+**linear**: A single global scale and offset. Dequantise with `value = quantized * scale + offset`.
+
+**per_pixel_scale**: Each pixel has its own scale factor stored in a separate array. Dequantise with `value[..., y, x] = quantized[..., y, x] * scale_array[..., y, x]`. The `scale_array` field names the zarr array containing the per-pixel scales. Non-finite values in the scale array (`NaN`, `+inf`) indicate no-data pixels.
+
+### Spatial Layout
+
+The optional `geoemb:spatial_layout` field describes how the embedding data is spatially organised within the zarr store.
+
+**`utm_zones`**: The store contains one group per UTM zone, named `utm{NN}` where `NN` is the two-digit zero-padded zone number (01-60).  Each zone group contains the embedding arrays in the zone's native UTM projection.
+
+**`global`**: A single group or root-level array covering the full Earth extent in a global CRS (typically EPSG:4326).
+
+Stores using `utm_zones` layout SHOULD declare `proj:` and `spatial:` conventions on each zone group for CRS and affine transform metadata.
+
+## Examples
+
+- [Minimal pixel embedding](examples/minimal_example.json) — float32, no quantization
+- [Full chip embedding](examples/full_example.json) — Clay, regular grid patches
+- [AEF satellite embedding](examples/aef_example.json) — int8, linear quantization
+- [Tessera embedding](examples/tessera_example.json) — int8, per-pixel scale, UTM zones, multi-source
 
 ## Known Implementations
 
