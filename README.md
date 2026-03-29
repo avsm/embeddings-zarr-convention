@@ -1,30 +1,37 @@
-# Template Convention Metadata
+# Geoembeddings Convention Metadata
 
-- **UUID**: 00000000-0000-0000-0000-000000000000
-- **Name**: Template
-- **Schema URL**: "https://raw.githubusercontent.com/zarr-conventions/template/refs/tags/v1/schema.json"
-- **Spec URL**: "https://github.com/zarr-conventions/template/blob/v1/README.md"
-- **Scope**: Array, Group
+- **UUID**: 61c12cc5-0e28-4056-999a-480cf3fb7e4c
+- **Name**: geoemb:
+- **Schema URL**: "https://raw.githubusercontent.com/geo-embeddings/embeddings-zarr-convention/refs/tags/v1/schema.json"
+- **Spec URL**: "https://github.com/geo-embeddings/embeddings-zarr-convention/blob/v1/README.md"
+- **Scope**: Group
 - **Extension Maturity Classification**: Proposal
-- **Owner**: @your-github-handle, @another-github-handle
+- **Owner**: @geo-embeddings
 
 ## Description
 
-This convention defines [brief description of what this convention does]. All properties use the `template:` namespace prefix (or nested `template` object) and are placed at the root `attributes` level following the [Zarr Conventions Specification](https://github.com/zarr-conventions/zarr-conventions-spec).
+This convention defines metadata for geospatial embedding groups stored in Zarr format. It provides standardized attributes for describing embedding provenance, including the encoder model, source data, processing parameters, and quality metrics. All properties use the `geoemb:` namespace prefix and are placed at the root `attributes` level following the [Zarr Conventions Specification](https://github.com/zarr-conventions/zarr-conventions-spec).
 
-[Add more detailed description of the convention, its purpose, and how it fits into the Zarr ecosystem. Explain what problem it solves and how it should be used.]
+The convention supports two embedding types:
+
+- **Pixel embeddings**: Per-pixel dense embeddings where each spatial location has an embedding vector
+- **Patch (Chip) embeddings**: Image patch (chip) embeddings where non-overlapping or overlapping regions are encoded into single vectors
+
+This convention is designed to be compatible with [GeoZarr conventions](https://geozarr.org/conventions.html) and can be used alongside:
+
+- `proj:` for CRS information
+- `spatial:` for coordinate transforms and bounding boxes
 
 - Examples:
-  - [Convention metadata only](examples/minimal_example.json)
-  - [Key-prefixed pattern (recommended)](examples/key_prefixed_example.json)
-  - [Nested pattern](examples/nested_example.json)
+  - [Minimal pixel embedding](examples/minimal_example.json)
+  - [Full chip embedding with all fields](examples/full_example.json)
 
 ## Motivation
 
-- **First benefit**: Explanation of the first key benefit this convention provides
-- **Second benefit**: Explanation of the second key benefit
-- **Third benefit**: Explanation of additional benefits
-- **Use case alignment**: How this convention aligns with common use cases in the domain
+- **Reproducibility**: Track model provenance and inference parameters for scientific reproducibility
+- **Interoperability**: Standard metadata enables embedding search and comparison across datasets
+- **Discoverability**: Structured metadata supports catalog queries and dataset discovery
+- **Quality transparency**: Uncertainty fields promote responsible AI practices
 
 ## Convention Registration
 
@@ -34,11 +41,11 @@ The convention must be registered in `zarr_conventions`:
 {
   "zarr_conventions": [
     {
-      "schema_url": "https://raw.githubusercontent.com/zarr-conventions/template/refs/tags/v1/schema.json",
-      "spec_url": "https://github.com/zarr-conventions/template/blob/v1/README.md",
-      "uuid": "00000000-0000-0000-0000-000000000000",
-      "name": "template:",
-      "description": "Brief description of the convention"
+      "schema_url": "https://raw.githubusercontent.com/geo-embeddings/embeddings-zarr-convention/refs/tags/v1/schema.json",
+      "spec_url": "https://github.com/geo-embeddings/embeddings-zarr-convention/blob/v1/README.md",
+      "uuid": "61c12cc5-0e28-4056-999a-480cf3fb7e4c",
+      "name": "geoemb:",
+      "description": "Geoembeddings convention for geospatial embedding arrays with model provenance"
     }
   ]
 }
@@ -49,116 +56,108 @@ The convention must be registered in `zarr_conventions`:
 This convention can be used with these parts of the Zarr hierarchy:
 
 - [x] Group
-- [x] Array
+- [ ] Array
 
 ## Properties
 
-All properties are placed at the root `attributes` level. To avoid attribute name collisions with other conventions, this convention supports the following pattern [remove the pattern irrelevant for this convention]:
+All properties are placed at the root `attributes` level with the `geoemb:` prefix.
 
-#### 1. Key-Prefixed Pattern (Recommended)
+### Required Fields
 
-Individual attributes are prefixed with `template:`. This is the recommended approach as it enables better composability - other conventions can extend objects defined by this convention.
+| Field Name         | Type              | Description                                          |
+| ------------------ | ----------------- | ---------------------------------------------------- |
+| geoemb:type        | "pixel" \| "chip" | **REQUIRED**. Type of embedding                      |
+| geoemb:dimensions  | integer           | **REQUIRED**. Dimensionality of the embedding vector |
+| geoemb:model       | string (URL)      | **REQUIRED**. Reference to the encoder model         |
+| geoemb:source_data | string (URL)      | **REQUIRED**. Reference to the source dataset        |
+| geoemb:data_type   | string            | **REQUIRED**. Data type of stored embeddings (e.g., "float32", "int8") |
 
-**Convention metadata name**: `template:`
+**Note**: When `geoemb:type` is `"chip"`, the `geoemb:chip_layout` field is also required.
 
-| Field Name           | Type                      | Description                                  |
-| -------------------- | ------------------------- | -------------------------------------------- |
-| template:new_field   | string                    | **REQUIRED**. Describe the required field... |
-| template:xyz         | [XYZ Object](#xyz-object) | Describe the field...                        |
-| template:another_one | \[number]                 | Describe the field...                        |
+### Optional Fields
 
-**Example**:
+| Field Name                 | Type                                        | Description                                        |
+| -------------------------- | ------------------------------------------- | -------------------------------------------------- |
+| geoemb:gsd                 | number                                      | Ground sample distance in meters                   |
+| geoemb:chip_layout         | [Chip Layout Object](#chip-layout-object)   | Chip layout configuration (required for chip-type) |
+| geoemb:quantization        | [Quantization Object](#quantization-object) | Compression/quantization details                   |
+| geoemb:benchmark           | \[string]                                   | URLs to benchmark evaluation results               |
+
+### Example (Minimal Pixel Embedding)
 
 ```json
 {
+  "zarr_format": 3,
+  "node_type": "group",
   "attributes": {
-    "zarr_conventions": [{ "name": "template:", "spec_url": "..." }],
-    "template:new_field": "example value",
-    "template:xyz": { "x": 1.0, "y": 2.0, "z": 3.0 }
+    "zarr_conventions": [
+      { "name": "geoemb:", "uuid": "61c12cc5-0e28-4056-999a-480cf3fb7e4c" }
+    ],
+    "geoemb:type": "pixel",
+    "geoemb:dimensions": 768,
+    "geoemb:model": "https://huggingface.co/made-with-clay/Clay",
+    "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "geoemb:data_type": "float32"
   }
 }
 ```
 
-#### 2. Nested Pattern
-
-All convention properties are nested under a single `template` key.
-
-**Convention metadata name**: `template`
-
-| Field Name | Type                                | Description                                  |
-| ---------- | ----------------------------------- | -------------------------------------------- |
-| template   | [Template Object](#template-object) | **REQUIRED**. Template convention properties |
-
-**Example**:
+### Example (Full Chip Embedding)
 
 ```json
 {
+  "zarr_format": 3,
+  "node_type": "group",
   "attributes": {
-    "zarr_conventions": [{ "name": "template", "spec_url": "..." }],
-    "template": {
-      "new_field": "example value",
-      "xyz": { "x": 1.0, "y": 2.0, "z": 3.0 }
+    "zarr_conventions": [
+      { "name": "geoemb:", "uuid": "61c12cc5-0e28-4056-999a-480cf3fb7e4c" }
+    ],
+    "geoemb:type": "chip",
+    "geoemb:dimensions": 768,
+    "geoemb:model": "https://huggingface.co/made-with-clay/Clay",
+    "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "geoemb:data_type": "float32",
+    "geoemb:gsd": 10.0,
+    "geoemb:chip_layout": {
+      "layout_type": "regular_grid",
+      "chip_size": [256, 256],
+      "stride": [256, 256]
     }
   }
 }
 ```
 
-### Template Object
+## Complex Objects
 
-When using the nested pattern, all properties are contained in the `template` object:
+### Chip Layout Object
 
-| Field Name  | Type                      | Description                                  |
-| ----------- | ------------------------- | -------------------------------------------- |
-| new_field   | string                    | **REQUIRED**. Describe the required field... |
-| xyz         | [XYZ Object](#xyz-object) | Describe the field...                        |
-| another_one | \[number]                 | Describe the field...                        |
+Configuration for chip-type embeddings describing how the source imagery was divided.
 
-### Additional Field Information
+| Field Name      | Type                          | Description                                             |
+| --------------- | ----------------------------- | ------------------------------------------------------- |
+| layout_type     | "regular_grid" \| "irregular" | **REQUIRED**. Type of chip layout                       |
+| chip_size       | \[integer, integer]           | **REQUIRED**. Chip dimensions [height, width] in pixels |
+| stride          | \[integer, integer]           | Stride between chips [y, x]. Defaults to chip_size      |
+| grid_id         | string                        | Identifier for a predefined grid system                 |
+| grid_definition | string (URL)                  | URL to grid definition document                         |
 
-#### new_field (template:new_field or template.new_field)
+### Quantization Object
 
-This is a much more detailed description of the field `new_field`...
+Details for embeddings that have been quantized for compression.
 
-### XYZ Object
-
-This is the introduction for the purpose and the content of the XYZ Object...
-
-| Field Name | Type   | Description                                  |
-| ---------- | ------ | -------------------------------------------- |
-| x          | number | **REQUIRED**. Describe the required field... |
-| y          | number | **REQUIRED**. Describe the required field... |
-| z          | number | **REQUIRED**. Describe the required field... |
+| Field Name      | Type         | Description                                                                          |
+| --------------- | ------------ | ------------------------------------------------------------------------------------ |
+| method          | string       | **REQUIRED**. Quantization method (e.g., "linear", "product_quantization", "binary") |
+| original_dtype  | string       | **REQUIRED**. Original data type before quantization (e.g., "float32")               |
+| quantized_dtype | string       | Data type after quantization (e.g., "int8")                                          |
+| scale           | number       | Scale factor for linear dequantization                                               |
+| offset          | number       | Offset for linear dequantization                                                     |
+| link            | string (URL) | URL to quantization codebook or lookup table                                         |
 
 ## Known Implementations
-
-This section helps potential implementers assess the convention's maturity and adoption, and provides a way for the community to collaborate on future revisions.
-
-### Libraries and Tools
-
-- **[Library/Tool Name](https://link-to-repo)** - Brief description of the implementation
-  - Language: Python/JavaScript/Rust/etc.
-  - Status: Experimental/Stable/Production
-  - Maintainer: @github-handle
-  - Since: Version X.Y or Date
-
-- **[Another Implementation](https://link)** - Description
-  - Language: Language
-  - Status: Status
-  - Maintainer: @handle
-  - Since: Version/Date
-
-### Datasets Using This Convention
-
-- **[Dataset Name](https://link-to-dataset)** - Description of the dataset and how it uses this convention
-- **[Another Dataset](https://link)** - Description
-
-### Resources
-
-- Tutorials, blog posts, or other resources demonstrating this convention
-- Community discussions or working groups
 
 _If you implement or use this convention, please add your implementation to this list by submitting a pull request._
 
 ## Acknowledgements
 
-This template is based on the [STAC extensions template](https://github.com/stac-extensions/template/blob/main/README.md).
+This convention is based on the [embeddings-stac-specification](https://github.com/geo-embeddings/embeddings-stac-specification) and follows the [Zarr Conventions](https://github.com/zarr-conventions) template.
