@@ -15,7 +15,7 @@ This convention defines metadata for geospatial embedding groups stored in Zarr 
 The convention supports two embedding types:
 
 - **Pixel embeddings**: Per-pixel dense embeddings where each spatial location has an embedding vector
-- **Patch embeddings**: Image patch (chip) embeddings where non-overlapping or overlapping regions are encoded into single vectors
+- **Patch (Chip) embeddings**: Image patch (chip) embeddings where non-overlapping or overlapping regions are encoded into single vectors
 
 This convention is designed to be compatible with [GeoZarr conventions](https://geozarr.org/conventions.html) and can be used alongside:
 
