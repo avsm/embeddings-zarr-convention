@@ -40,8 +40,11 @@
       "method": "per_pixel_scale",
       "original_dtype": "float32",
       "quantized_dtype": "int8",
-      "scale_array": "scales",
-      "nodata": "+inf"
+      "scale": {
+        "type": "array",
+        "array_name": "scales",
+        "nodata": "+inf"
+      }
     },
     "proj:code": "EPSG:32630",
     "spatial:dimensions": ["y", "x"],

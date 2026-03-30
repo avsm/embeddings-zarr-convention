@@ -23,8 +23,9 @@ This convention is designed to be compatible with [GeoZarr conventions](https://
 - `spatial:` for coordinate transforms and bounding boxes
 
 - Examples:
-  - [Minimal pixel embedding](examples/minimal_example.json)
-  - [Full chip embedding with all fields](examples/full_example.json)
+  - [Clay chip embedding](examples/clay_example.json)
+  - [AEF satellite embedding](examples/aef_example.json)
+  - [TESSERA pixel embedding](examples/tessera_example.json)
 
 ## Motivation
 
@@ -69,7 +70,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
 | geoemb:type        | "pixel" \| "chip" | **REQUIRED**. Type of embedding                      |
 | geoemb:dimensions  | integer           | **REQUIRED**. Dimensionality of the embedding vector |
 | geoemb:model       | string (URL)      | **REQUIRED**. Reference to the encoder model         |
-| geoemb:source_data | string (URL) or \[string] | **REQUIRED**. Reference(s) to the source dataset(s) |
+| geoemb:source_data | \[string] | **REQUIRED**. References to the source datasets |
 | geoemb:data_type   | string            | **REQUIRED**. Data type of stored embeddings (e.g., "float32", "int8") |
 
 **Note**: When `geoemb:type` is `"chip"`, the `geoemb:chip_layout` field is also required.
@@ -98,7 +99,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
     "geoemb:type": "pixel",
     "geoemb:dimensions": 768,
     "geoemb:model": "https://huggingface.co/made-with-clay/Clay",
-    "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "geoemb:source_data": ["https://registry.opendata.aws/sentinel-2-l2a-cogs/"],
     "geoemb:data_type": "float32"
   }
 }
@@ -117,7 +118,7 @@ All properties are placed at the root `attributes` level with the `geoemb:` pref
     "geoemb:type": "chip",
     "geoemb:dimensions": 768,
     "geoemb:model": "https://huggingface.co/made-with-clay/Clay",
-    "geoemb:source_data": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+    "geoemb:source_data": ["https://registry.opendata.aws/sentinel-2-l2a-cogs/"],
     "geoemb:data_type": "float32",
     "geoemb:gsd": 10.0,
     "geoemb:chip_layout": {
@@ -147,22 +148,37 @@ Configuration for chip-type embeddings describing how the source imagery was div
 
 Details for embeddings that have been quantized for compression.
 
-| Field Name      | Type         | Description                                                                          |
-| --------------- | ------------ | ------------------------------------------------------------------------------------ |
-| method          | string       | **REQUIRED**. Quantization method (e.g., "linear", "per_pixel_scale", "product_quantization", "binary") |
-| original_dtype  | string       | **REQUIRED**. Original data type before quantization (e.g., "float32")               |
-| quantized_dtype | string       | Data type after quantization (e.g., "int8")                                          |
-| scale           | number       | Scale factor for linear dequantization                                               |
-| offset          | number       | Offset for linear dequantization                                                     |
-| scale_array     | string       | Array name containing per-pixel scales (for per_pixel_scale method)                  |
-| nodata          | number or string | Value in the scale array indicating no data (e.g., "nan", "+inf")                |
-| link            | string (URL) | URL to quantization codebook or lookup table                                         |
+| Field Name      | Type                                | Description                                                                          |
+| --------------- | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| method          | string                              | **REQUIRED**. Quantization method (e.g., "linear", "per_pixel_scale", "product_quantization", "binary") |
+| original_dtype  | string                              | **REQUIRED**. Original data type before quantization (e.g., "float32")               |
+| quantized_dtype | string                              | Data type after quantization (e.g., "int8")                                          |
+| scale           | [Scale Object](#scale-object)       | Scale parameters for dequantization                                                  |
+| link            | string (URL)                        | URL to quantization codebook or lookup table                                         |
 
-#### Quantization Methods
+### Scale Object
 
-**linear**: A single global scale and offset. Dequantise with `value = quantized * scale + offset`.
+The `scale` field uses a discriminated union with a `type` field to support different dequantization strategies.
 
-**per_pixel_scale**: Each pixel has its own scale factor stored in a separate array. Dequantise with `value[..., y, x] = quantized[..., y, x] * scale_array[..., y, x]`. The `scale_array` field names the zarr array containing the per-pixel scales. Non-finite values in the scale array (`NaN`, `+inf`) indicate no-data pixels.
+#### Scalar Scale
+
+A single global scale and offset. Dequantise with `value = quantized * scale + offset`.
+
+| Field Name | Type   | Description                                         |
+| ---------- | ------ | --------------------------------------------------- |
+| type       | string | **REQUIRED**. Must be `"scalar"`                    |
+| scale      | number | **REQUIRED**. Scale factor for linear dequantization |
+| offset     | number | Offset for linear dequantization (default: 0.0)     |
+
+#### Array Scale
+
+Each pixel has its own scale factor stored in a separate zarr array. Dequantise with `value[..., y, x] = quantized[..., y, x] * array[..., y, x]`. Non-finite values in the scale array (`NaN`, `+inf`) indicate no-data pixels.
+
+| Field Name | Type             | Description                                                      |
+| ---------- | ---------------- | ---------------------------------------------------------------- |
+| type       | string           | **REQUIRED**. Must be `"array"`                                  |
+| array_name | string           | **REQUIRED**. Name of the zarr array containing per-pixel scales |
+| nodata     | number or string | Value in the scale array indicating no data (e.g., "+inf")       |
 
 ### Spatial Layout
 
@@ -176,8 +192,7 @@ Stores using `utm_zones` layout SHOULD declare `proj:` and `spatial:` convention
 
 ## Examples
 
-- [Minimal pixel embedding](examples/minimal_example.json) — float32, no quantization
-- [Full chip embedding](examples/full_example.json) — Clay, regular grid patches
+- [Clay chip embedding](examples/clay_example.json) — Clay, regular grid patches
 - [AEF satellite embedding](examples/aef_example.json) — int8, linear quantization
 - [Tessera embedding](examples/tessera_example.json) — int8, per-pixel scale, UTM zones, multi-source
 
